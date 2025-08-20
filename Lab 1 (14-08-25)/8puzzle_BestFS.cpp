@@ -1,116 +1,70 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <set>
 using namespace std;
-using namespace std::chrono;
 
-struct Node {
-    vector<vector<int>> state;
-    int cost;
-};
-
-vector<vector<int>> goal = {
-    {1,2,3},
-    {4,5,6},
-    {7,8,0}
-};
-
-// Count inversions for solvability check
-bool isSolvable(vector<vector<int>> puzzle) {
-    vector<int> arr;
-    for (auto &row : puzzle) {
-        for (int x : row) {
-            if (x != 0) arr.push_back(x);
-        }
-    }
-    int inv = 0;
-    for (int i = 0; i < arr.size(); i++) {
-        for (int j = i + 1; j < arr.size(); j++) {
-            if (arr[i] > arr[j]) inv++;
-        }
-    }
-    return (inv % 2 == 0);
+int heuristic(string state, string goal) {
+    int h = 0;
+    for (int i = 0; i < 9; i++)
+        if (state[i] != '0' && state[i] != goal[i])
+            h++;
+    return h;
 }
 
-// Heuristic: misplaced tiles
-int heuristic(vector<vector<int>> &s) {
-    int cnt = 0;
-    for (int i=0;i<3;i++) {
-        for (int j=0;j<3;j++) {
-            if(s[i][j] && s[i][j] != goal[i][j]) cnt++;
+vector<string> getNextStates(const string &state) {
+    vector<string> nextStates;
+    int zero = state.find('0');
+    int row = zero / 3, col = zero % 3;
+    vector<pair<int,int>> directions = {{-1,0},{1,0},{0,-1},{0,1}};
+    for (auto dir : directions) {
+        int newRow = row + dir.first, newCol = col + dir.second;
+        if (newRow >= 0 && newRow < 3 && newCol >= 0 && newCol < 3) {
+            string newState = state;
+            swap(newState[zero], newState[newRow * 3 + newCol]);
+            nextStates.push_back(newState);
         }
     }
-    return cnt;
+    return nextStates;
 }
 
-bool isGoal(vector<vector<int>> &s) {
-    return s == goal;
-}
-
-// Get neighbors
-vector<vector<vector<int>>> getNeighbors(vector<vector<int>> &s) {
-    vector<vector<vector<int>>> res;
-    int x,y;
-    for(int i=0;i<3;i++)
-        for(int j=0;j<3;j++)
-            if(s[i][j]==0) { x=i; y=j; }
-
-    int dx[4]={-1,1,0,0}, dy[4]={0,0,-1,1};
-    for(int k=0;k<4;k++) {
-        int nx=x+dx[k], ny=y+dy[k];
-        if(nx>=0 && nx<3 && ny>=0 && ny<3) {
-            auto temp = s;
-            swap(temp[x][y], temp[nx][ny]);
-            res.push_back(temp);
+void bestFirstSearch(string start, string goal) {
+    struct Node {
+        string state;
+        int h;
+        bool operator<(const Node &other) const {
+            return h > other.h;
         }
-    }
-    return res;
-}
-
-// Best-First Search
-void solveBestFirst(vector<vector<int>> start) {
-    cout << "\nBest-First Search:\n";
-
-    if (!isSolvable(start)) {
-        cout << "Not Solvable\n";
-        return;
-    }
-
-    auto begin = high_resolution_clock::now();
-
-    auto cmp = [](Node a, Node b){ return a.cost > b.cost; };
-    priority_queue<Node, vector<Node>, decltype(cmp)> pq(cmp);
-    pq.push({start, heuristic(start)});
-
-    set<vector<vector<int>>> visited;
-
-    while(!pq.empty()) {
-        Node cur = pq.top(); pq.pop();
-
-        if (isGoal(cur.state)) {
-            auto end = high_resolution_clock::now();
-            auto duration = duration_cast<milliseconds>(end - begin);
-            cout << "Solved\n";
-            cout << "Time taken: " << duration.count() << " ms\n";
+    };
+    priority_queue<Node> pq;
+    set<string> visited;
+    pq.push({start, heuristic(start, goal)});
+    visited.insert(start);
+    while (!pq.empty()) {
+        Node cur = pq.top();
+        pq.pop();
+        cout << "Visiting: " << cur.state << "  (h=" << cur.h << ")\n";
+        if (cur.state == goal) {
+            cout << "\nGoal state reached!\n";
             return;
         }
-
-        visited.insert(cur.state);
-
-        for(auto &next : getNeighbors(cur.state)) {
-            if(visited.find(next) == visited.end()) {
-                pq.push({next, heuristic(next)});
+        for (auto &next : getNextStates(cur.state)) {
+            if (!visited.count(next)) {
+                visited.insert(next);
+                pq.push({next, heuristic(next, goal)});
             }
         }
     }
-
-    cout << "No solution found.\n";
+    cout << "\nGoal state not reachable!\n";
 }
 
 int main() {
-    vector<vector<int>> start = {
-        {1,2,3},
-        {4,0,6},
-        {7,5,8}
-    };
+    string initial, goal;
+    cout << "Enter initial state: ";
+    cin >> initial;
+    cout << "\nEnter goal state: ";
+    cin >> goal;
 
-    solveBestFirst(start);
+    bestFirstSearch(initial, goal);
+    return 0;
 }

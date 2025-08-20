@@ -1,97 +1,51 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <vector>
+#include <set>
+#include <algorithm>
 using namespace std;
-using namespace std::chrono;
 
-struct Node {
-    vector<vector<int>> state;
-    string path;
-};
-
-vector<vector<int>> goal = {{1,2,3},{4,5,6},{7,8,0}};
-int dx[4] = {-1,1,0,0};
-int dy[4] = {0,0,-1,1};
-string dir = "UDLR";
-
-// Find blank position
-pair<int,int> findZero(vector<vector<int>> &s) {
-    for(int i=0;i<3;i++)
-        for(int j=0;j<3;j++)
-            if(s[i][j]==0) return {i,j};
-    return {-1,-1};
+bool isGoal(string &initial, string&goal) {
+    return initial == goal;
 }
 
-// Check goal
-bool isGoal(vector<vector<int>> &s) { return s==goal; }
-
-// Generate neighbors
-vector<Node> neighbors(Node cur) {
-    vector<Node> res;
-    auto [x,y] = findZero(cur.state);
-    for(int k=0;k<4;k++) {
-        int nx=x+dx[k], ny=y+dy[k];
-        if(nx>=0 && nx<3 && ny>=0 && ny<3) {
-            Node nxt = cur;
-            swap(nxt.state[x][y], nxt.state[nx][ny]);
-            nxt.path += dir[k];
-            res.push_back(nxt);
+vector<string> getNextStates(string current) {
+    vector<string> newStates;
+    int zeroIndex = current.find('0');
+    int curRow = zeroIndex/3, curCol = zeroIndex%3;
+    vector<pair<int,int>> directions = {{-1,0},{1,0},{0,-1},{0,1}};
+    for(auto dir : directions) {
+        int newRow = curRow + dir.first, newCol = curCol + dir.second;
+        if(newRow<3 && newRow>=0 && newCol<3 && newCol>=0) {
+            int newZeroPos = newRow*3 + newCol;
+            string newState = current;
+            swap(newState[zeroIndex],newState[newZeroPos]);
+            newStates.push_back(newState);
         }
     }
-    return res;
+    return newStates;
 }
 
-// Check solvability using inversion count
-bool isSolvable(vector<vector<int>> board) {
-    vector<int> flat;
-    for(int i=0;i<3;i++)
-        for(int j=0;j<3;j++)
-            if(board[i][j]!=0) flat.push_back(board[i][j]);
-
-    int inv=0;
-    for(int i=0;i<flat.size();i++)
-        for(int j=i+1;j<flat.size();j++)
-            if(flat[i] > flat[j]) inv++;
-
-    return (inv%2==0);
-}
-
-// DFS util with depth limit
-bool dfsUtil(Node cur, set<vector<vector<int>>> &vis, int depth, int limit) {
-    if(isGoal(cur.state)) return true;
-    if(depth > limit) return false;
-
-    vis.insert(cur.state);
-    for(auto nxt: neighbors(cur)) {
-        if(!vis.count(nxt.state)) {
-            if(dfsUtil(nxt, vis, depth+1, limit))
-                return true;
+bool dfs(string current, string goal, set<string> &visited) {
+    cout<<"\nCurrent state: "<<current;
+    if(isGoal(current,goal)) return 1;
+    visited.insert(current);
+    vector<string> nextStates = getNextStates(current);
+    for(auto str : nextStates) {
+        if(!visited.count(str)) {
+            if(dfs(str,goal,visited)) return 1;
         }
     }
-    return false;
-}
-
-bool solveDFS(vector<vector<int>> start, int limit=20) {
-    set<vector<vector<int>>> vis;
-    return dfsUtil({start,""}, vis, 0, limit);
+    return 0;
 }
 
 int main() {
-    vector<vector<int>> start = {
-        {1,2,3},
-        {4,5,6},
-        {8,7,0}
-    };
-
-    if(!isSolvable(start)) {
-        cout << "Unsolvable\n";
-        return 0;
-    }
-
-    auto begin = high_resolution_clock::now();
-    bool solved = solveDFS(start, 20); // depth limit = 20
-    auto end = high_resolution_clock::now();
-
-    auto duration = duration_cast<milliseconds>(end - begin);
-
-    if(solved) cout << "Solvable (Time: " << duration.count() << " ms)\n";
-    else cout << "Unsolvable (within depth limit)\n";
+    set<string> visited;
+    cout<<"Enter the initial state: ";
+    string initial, goal;
+    cin>>initial;
+    cout<<"\nEnter the goal state: ";
+    cin>>goal;
+    if(dfs(initial,goal,visited)) cout<<"\nGoal state is achievable!";
+    else cout<<"Goal state not achievable!";
+    return 0;
 }
