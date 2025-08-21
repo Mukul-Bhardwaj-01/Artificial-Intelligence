@@ -20,7 +20,7 @@ pair<int,int> findZero(vector<vector<int>> &s) {
     return {-1,-1};
 }
 
-// Check goal
+// Check if goal
 bool isGoal(vector<vector<int>> &s) { return s==goal; }
 
 // Generate neighbors
@@ -54,31 +54,31 @@ bool isSolvable(vector<vector<int>> board) {
     return (inv%2==0);
 }
 
-// DFS util with depth limit
-bool dfsUtil(Node cur, set<vector<vector<int>>> &vis, int depth, int limit) {
-    if(isGoal(cur.state)) return true;
-    if(depth > limit) return false;
+// BFS solve (but don’t print moves)
+bool solveBFS(vector<vector<int>> start) {
+    queue<Node> q;
+    set<vector<vector<int>>> vis;
+    q.push({start,""});
+    vis.insert(start);
 
-    vis.insert(cur.state);
-    for(auto nxt: neighbors(cur)) {
-        if(!vis.count(nxt.state)) {
-            if(dfsUtil(nxt, vis, depth+1, limit))
-                return true;
+    while(!q.empty()){
+        Node cur=q.front(); q.pop();
+        if(isGoal(cur.state)) return true; // found solution
+        for(auto nxt: neighbors(cur)){
+            if(!vis.count(nxt.state)){
+                vis.insert(nxt.state);
+                q.push(nxt);
+            }
         }
     }
     return false;
 }
 
-bool solveDFS(vector<vector<int>> start, int limit=20) {
-    set<vector<vector<int>>> vis;
-    return dfsUtil({start,""}, vis, 0, limit);
-}
-
 int main() {
     vector<vector<int>> start = {
         {1,2,3},
-        {4,5,6},
-        {8,7,0}
+        {4,0,6},
+        {7,5,8}
     };
 
     if(!isSolvable(start)) {
@@ -87,11 +87,11 @@ int main() {
     }
 
     auto begin = high_resolution_clock::now();
-    bool solved = solveDFS(start, 20); // depth limit = 20
+    bool solved = solveBFS(start);
     auto end = high_resolution_clock::now();
 
     auto duration = duration_cast<milliseconds>(end - begin);
 
     if(solved) cout << "Solvable (Time: " << duration.count() << " ms)\n";
-    else cout << "Unsolvable (within depth limit)\n";
+    else cout << "Unsolvable\n";
 }
