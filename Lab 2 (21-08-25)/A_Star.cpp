@@ -1,93 +1,72 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-// State structure for each cell
-struct State {
-    int x, y;   // position
-    int g, h;   // g = cost so far, h = heuristic
-    vector<pair<int,int>> path; // path taken so far
-
-    // Compare function for priority queue (min-heap by f)
-    bool operator<(const State& other) const {
-        return (g + h) > (other.g + other.h); // reversed for min-heap
+vector<pair<int,int>> getNextStates(const vector<vector<int>> &grid, int m, int n, int iCur, int jCur) {
+    vector<pair<int,int>> nextStates;
+    //Up level
+    if(iCur-1>=0) {
+        if(jCur-1>=0 && grid[iCur-1][jCur-1] != 1) nextStates.push_back({iCur-1,jCur-1});
+        if(grid[iCur-1][jCur] != 1) nextStates.push_back({iCur-1,jCur});
+        if(jCur+1<n && grid[iCur-1][jCur+1] != 1) nextStates.push_back({iCur-1,jCur+1});
     }
-};
-
-// Heuristic: Manhattan distance
-int heuristic(int x1, int y1, int x2, int y2) {
-    return abs(x1 - x2) + abs(y1 - y2);
+    //Same level
+    if(jCur-1 >= 0 && grid[iCur][jCur-1] != 1) nextStates.push_back({iCur,jCur-1});
+    if(jCur+1 < n && grid[iCur][jCur+1] != 1) nextStates.push_back({iCur,jCur+1});
+    //down level
+    if(iCur+1 < m) {
+        if(jCur-1>=0 && grid[iCur+1][jCur-1] != 1) nextStates.push_back({iCur+1,jCur-1});
+        if(grid[iCur+1][jCur] != 1)nextStates.push_back({iCur+1,jCur});
+        if(jCur+1<n && grid[iCur+1][jCur+1] != 1) nextStates.push_back({iCur+1,jCur+1});
+    }
+    return nextStates;
 }
 
-// Check validity of move
-bool isValid(int x, int y, int rows, int cols, vector<vector<int>>& grid) {
-    return (x >= 0 && y >= 0 && x < rows && y < cols && grid[x][y] == 0);
-}
-
-// A* algorithm using priority queue
-vector<pair<int,int>> AStar(vector<vector<int>>& grid, pair<int,int> start, pair<int,int> goal) {
-    int rows = grid.size(), cols = grid[0].size();
-
-    vector<vector<bool>> visited(rows, vector<bool>(cols, false));
-
-    priority_queue<State> pq;
-
-    // Push start state
-    pq.push({start.first, start.second, 0, heuristic(start.first, start.second, goal.first, goal.second), {{start.first, start.second}}});
-
-    int dx[4] = {1, -1, 0, 0};
-    int dy[4] = {0, 0, 1, -1};
-
-    while (!pq.empty()) {
-        State current = pq.top();
-        pq.pop();
-
-        int x = current.x, y = current.y;
-
-        if (visited[x][y]) continue;
-        visited[x][y] = true;
-
-        // Goal check
-        if (x == goal.first && y == goal.second) {
-            return current.path;
+void reachGoal(vector<vector<int>> grid, int is, int js, int ig, int jg, int m, int n) {
+    queue<pair<int,int>> q;
+    set<pair<int,int>> visited;
+    q.push({is,js});
+    visited.insert({is,js});
+    while(!q.empty()) {
+        auto state = q.front();
+        q.pop();
+        cout<<"\n("<<state.first<<","<<state.second<<")";
+        if(state.first == ig && state.second == jg) {
+            cout<<"\nThe goal has been reached!";
+            return;
         }
-
-        // Expand neighbors
-        for (int i = 0; i < 4; i++) {
-            int nx = x + dx[i], ny = y + dy[i];
-            if (isValid(nx, ny, rows, cols, grid) && !visited[nx][ny]) {
-                int gNew = current.g + 1;
-                int hNew = heuristic(nx, ny, goal.first, goal.second);
-                auto newPath = current.path;
-                newPath.push_back({nx, ny});
-                pq.push({nx, ny, gNew, hNew, newPath});
+        for(auto nextState : getNextStates(grid, m,n,state.first,state.second)) {
+            if(!visited.count(nextState)) {
+                visited.insert(nextState);
+                q.push(nextState);
             }
         }
     }
-    return {}; // no path found
+    cout<<"\nThe goal is not reachable!";
 }
 
 int main() {
-    vector<vector<int>> grid = {
-        {0, 0, 0, 0, 0},
-        {1, 1, 0, 1, 0},
-        {0, 0, 0, 0, 0},
-        {0, 1, 1, 1, 0},
-        {0, 0, 0, 0, 0}
-    };
-
-    pair<int,int> start = {0, 0};
-    pair<int,int> goal = {4, 4};
-
-    auto path = AStar(grid, start, goal);
-
-    if (!path.empty()) {
-        cout << "Path found:\n";
-        for (auto [x,y] : path)
-            cout << "(" << x << "," << y << ") ";
-        cout << "\n";
-    } else {
-        cout << "No path exists.\n";
+    cout<<"Specify the grid dimensions: (Rows and columns) : ";
+    int m,n,is,js,ig,jg;
+    cin>>m>>n;
+    vector<vector<int>> grid(m, vector<int>(n));
+    cout<<"\nEnter the grid elements (0 is for free path, 1 is for obstacle) :\n";
+    for(int i = 0; i<m; ++i) {
+        for(int j = 0; j<n; ++j) {
+            cin>>grid[i][j];
+        }
+        cout<<endl;
     }
-
+    cout<<"\nThe input grid is:\n";
+    for(int i = 0; i<m; ++i) {
+        for(int j = 0; j<n; ++j) {
+            cout<<grid[i][j]<<"  ";
+        }
+        cout<<endl;
+    }
+    cout<<"\nEnter the start location : (i,j) : ";
+    cin>>is>>js;
+    cout<<"\nEnter the goal location : (k,l) : ";
+    cin>>ig>>jg;
+    reachGoal(grid,is,js,ig,jg,m,n);
     return 0;
 }
